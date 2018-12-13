@@ -1,0 +1,62 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/inline'
+require 'fileutils'
+
+gemfile do
+  source 'https://rubygems.org'
+  gem 'github_api'
+end
+
+USER = ENV['GITHUB_USER']
+raise 'missing env var: GITHUB USER' if USER.nil?
+
+FOLDER = ENV['STARCHIVE_FOLDER'] || File.expand_path('~/starchive')
+
+FileUtils.mkdir_p FOLDER
+
+def repo_path(star)
+  File.join(FOLDER, star.full_name)
+end
+
+def git_cmd(repo_path, cmd = nil)
+  "git --git-dir #{File.join(repo_path, '.git')} #{cmd}"
+end
+
+def git_dir?(repo_path)
+  File.directory? File.join(repo_path, '.git')
+end
+
+def notice(msg)
+  puts "\e[32m#{msg}\e[0m"
+end
+
+def error(msg)
+  puts "\e[31m#{msg}\e[0m"
+end
+
+Github.activity.starring.starred(user: USER).each_page do |page|
+  page.each do |star|
+    path = repo_path(star)
+    FileUtils.mkdir_p(path)
+
+    if git_dir?(path)
+
+      if system(git_cmd(path, 'fetch --all'))
+        notice "Refreshed #{star.full_name}"
+      else
+        error "Failed to update #{star.full_name}"
+      end
+
+    else
+
+      if system("git clone #{star.clone_url} #{path}")
+        notice "Cloned #{star.full_name}"
+      else
+        error "Faild to clone #{star.full_name}"
+      end
+
+    end
+  end
+end
