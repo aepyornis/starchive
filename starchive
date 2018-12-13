@@ -54,7 +54,7 @@ Github.activity.starring.starred(user: USER).each_page do |page|
       if system("git clone #{star.clone_url} #{path}")
         notice "Cloned #{star.full_name}"
       else
-        error "Faild to clone #{star.full_name}"
+        error "Failed to clone #{star.full_name}"
       end
 
     end
